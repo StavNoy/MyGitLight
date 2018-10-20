@@ -1,19 +1,43 @@
 <?php
 
-/* 
-	Write an executable program "MyGitLight.php"
-	who takes command line,
-	the argument "init" followed by a path. 
-	MyGitLight will have to copy its own source code and place it in a ".MyGitLight" folder that you have created in the path.
-*/
-
 	//TODO Write man
 	//TODO add try/catch everywhere
 
 	if ($argc < 2){
-		feedback("MyGitLight expects a command and arguments");
+		feedback("MyGitLight expects a command");
 		return 1;
-	} elseif ($argv[1] == "init"){
+	} elseif (function_exists($argv[1])){
+		return $argv[1]();
+	} else {
+		echo $argv[1] . " Isn't a valid command\n";
+		return 1;
+	}
+
+
+	function feedback(string $str){
+		echo $str . "\n";
+		//TODO show man
+	}
+
+	function commit(){
+		if (argc < 3){
+			feedback("A commit message is needed");
+			return 1;
+		}
+	}
+
+	function add(){
+		$paths = ($argv > 3) ? array_slice($argv, 2) : scandir(getcwd());
+		var_dump($paths);
+		foreach ($paths as $origin){
+			if (!copy($origin, dirname(__FILE__))){
+				echo "Failed to add $origin\n";
+			}
+		}
+		return 0;
+	}
+
+	function init(){
 		if ($argc < 3){
 			feedback("Please specify valid path");
 			return 1;
@@ -35,29 +59,4 @@
 			feedback("could not access $argv[2]");
 			return 1;
 		}
-	} elseif ($argv[1] == "add") {
-		$paths = ($argv > 3) ? array_slice($argv, 2) : scandir(getcwd());
-		foreach ($paths as $origin){
-			if (!copy($origin, dirname(__FILE__))){
-				echo "Failed to add $origin\n";
-			}
-		}
-		return 0;
-	} elseif ($argv[1] == "commit") {
-		if (argc < 3){
-			feedback("A commit message is needed");
-			return 1;
-		}
-	} elseif ($argv[1] == "remove") {
-		//TODO
-	} elseif ($argv[1] == "log") {
-		//TODO
-	} else {
-		echo $argv[1] . " Isn't a valid command\n";
-		return 1;
-	}
-
-	function feedback(string $str){
-		echo $str . "\n";
-		//TODO show man
 	}
