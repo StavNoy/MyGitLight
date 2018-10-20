@@ -38,12 +38,11 @@
 	} elseif ($argv[1] == "add") {
 		$paths = ($argv > 3) ? array_slice($argv, 2) : scandir(getcwd());
 		foreach ($paths as $origin){
-			if (file_exists($origin)){
-				copy($origin, dirname(dirname(__FILE__)));
-			} else {
-				
+			if (!copy($origin, dirname(__FILE__))){
+				echo "Failed to add $origin\n";
 			}
 		}
+		return 0;
 	} elseif ($argv[1] == "commit") {
 		if (argc < 3){
 			feedback("A commit message is needed");
