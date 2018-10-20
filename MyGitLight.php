@@ -10,28 +10,38 @@
 	//TODO Write man
 	//TODO add try/catch everywhere
 
-	array_shift($argv);
-	if ($argc < 1){
-		echo "MyGitLight expects a command and arguments\n";
-		//TODO echo man
+	if ($argc < 2){
+		feedback("MyGitLight expects a command and arguments");
 		return 1;
-	}elseif ($argv[0] == "init"){
-		array_shift($argv);
-		if ($argc < 1){
-			echo "Please specify valid path\n";
-			//TODO echo man
+	} elseif ($argv[1] == "init"){
+		if ($argc < 3){
+			feedback("Please specify valid path");
 			return 1;
-		} elseif (($fullPath = realpath($argv[0])) && is_dir($fullPath)){
-			echo $fullPath . "\n";
-			echo $argv[0] . "\n";
-			if (!file_exists($fullPath . "/.MyGitLight")){
-				mkdir($fullPath . "/.MyGitLight", 0777, true);
+		} elseif (($fullPath = realpath($argv[2])) && is_dir($fullPath)){
+			if (file_exists($fullPath . "/.MyGitLight")){
+				feedback("this folder already has a MyGitLight");
+				return 1;
+			} else {
+				if (!is_writable($fullPath . "/.MyGitLight")){
+					feedback("could not access folder : bad permissions");
+					return 1;
+				} else {
+					mkdir($fullPath . "/.MyGitLight", 0777, true);
+					copy(__FILE__, $fullPath . "/.MyGitLight/MyGitLight.php");
+					echo "Successfull init\n";
+					return 0;
+				}
 			}
-			copy(__FILE__, $fullPath . "/.MyGitLight/MyGitLight.php");
-			echo "Successfull init\n";
-			return 0;
+		} else {
+			feedback("could not access $argv[2]");
+			return 1;
 		}
 	} else {
-		echo $argv[0] . " Isn't a valid command\n";
-		//TODO add man
+		echo $argv[1] . " Isn't a valid command\n";
+		return 1;
+	}
+
+	function feedback(string $str){
+		echo $str . "\n";
+		//TODO show man
 	}
