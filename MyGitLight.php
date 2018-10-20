@@ -27,6 +27,27 @@
 		//TODO show man
 	}
 
+	function rm(array $args){
+		if (count($args) < 1){
+			feedback("Please specify files to remove");
+			return 1;
+		} else {
+			$motherdir = dirname(__FILE__);
+			foreach ($args as $path){
+				$added_version = "$motherdir/added/$path";
+				$work_version = "$motherdir/../$path";
+				if (file_exists($work_version) && file_exists($added_version)){
+					rec_del($added_version);
+					rec_del($work_version);
+				}else {
+					feedback("Stopped : Files must exist in both the working and the tracking directories");
+					return 1;
+				}
+			}
+			return 0;
+		}
+	}
+
 	function commit(array $msgAr = []){
 		if (empty($msgAr)){
 			feedback("A commit message is needed");
