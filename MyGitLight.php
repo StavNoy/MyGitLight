@@ -3,11 +3,13 @@
 	//TODO Write man
 	//TODO add try/catch everywhere
 
+	var_dump(array_diff(scandir(getcwd()), array('..', '.')));
+	
 	if ($argc < 2){
 		feedback("MyGitLight expects a command");
 		return 1;
 	} elseif (function_exists($argv[1])){
-		return $argv[1]();
+		return $argv[1](array_slice($argv, 2));
 	} else {
 		echo $argv[1] . " Isn't a valid command\n";
 		return 1;
@@ -19,29 +21,42 @@
 		//TODO show man
 	}
 
-	function commit(){
-		if (argc < 3){
+	function commit(array $msgAr = []){
+		if (empty($msgAr)){
 			feedback("A commit message is needed");
 			return 1;
 		}
 	}
 
-	function add(){
-		$paths = ($argv > 3) ? array_slice($argv, 2) : scandir(getcwd());
-		var_dump($paths);
+	function add(array $paths = []){
+		if (empty($paths)) {
+			$paths = scandir(getcwd());
+			$paths = array_diff($paths, array('..', '.'));
+		}
 		foreach ($paths as $origin){
-			if (!copy($origin, dirname(__FILE__))){
-				echo "Failed to add $origin\n";
-			}
+			rec_copy($origin, dirname(__FILE__) . "/" . $origin);
 		}
 		return 0;
 	}
+	function rec_copy(string $origin, string $target){
+		if (!is_dir($origin)){
+			if (!copy($origin, $target)){
+				echo "Failed to add $origin\n";
+			}
+		} else {
+			$subFiles = scandir($origin);
+			$subFiles = array_diff($subFiles, array('..', '.'));
+			foreach($subFiles as $aSub){
+				rec_copy($aSub, $origin . "/" . $aSub);
+			}
+		}
+	}
 
-	function init(){
-		if ($argc < 3){
+	function init(array $args = []){
+		if (empty($args)){
 			feedback("Please specify valid path");
 			return 1;
-		} elseif (($fullPath = realpath($argv[2])) && is_dir($fullPath)){
+		} elseif (($fullPath = realpath($args[0])) && is_dir($fullPath)){
 			if (file_exists($fullPath . "/.MyGitLight")){
 				feedback("this folder already has a MyGitLight");
 				return 1;
@@ -56,7 +71,7 @@
 				}
 			}
 		} else {
-			feedback("could not access $argv[2]");
+			feedback("could not access $args[0]");
 			return 1;
 		}
 	}
