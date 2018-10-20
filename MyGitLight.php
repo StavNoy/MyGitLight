@@ -8,10 +8,12 @@
 		return 1;
 	} elseif (function_exists($argv[1])){
 		$motherdir = dirname(__FILE__);
-		if ($motherdir != ".MyGitLight"){
+		if (basename($motherdir) != ".MyGitLight"){
 			echo "Error : not a MyGitLight repository\n";
 			return 1;
-		} else {
+		} elseif ($argv[1] == "log"){
+			return getLog();
+	 	} else {
 			return $argv[1](array_slice($argv, 2));
 		}
 	} else {
@@ -30,32 +32,39 @@
 			feedback("A commit message is needed");
 			return 1;
 		} else {
-			$motherdir = dirname(__FILE__);
+			$motherdir = realpath(dirname(__FILE__));
 			$tarballs = "$motherdir/tarballs";
 			$added = "$motherdir/added";
+			$log = "$motherdir/log.txt";
 			if(!file_exists($tarballs)) {
 				mkdir($tarballs);
 			}
 			if(is_dir($added)) {
-				static $id = 0;
-				$id++;
-				$folder = new Phar("$tarballs/$id.tar");
+				$logs = file($log);
+				$id = $logs[count($logs)-1][0]+1;
+				$tarName = "$tarballs/$id.tar";
+				$folder = new PharData($tarName);
 				$folder->buildFromDirectory($added);
 				$compressed = $folder->compress(Phar::GZ);
-				unlink($folder);
+				unlink($tarName);
+				rec_del($added);
+				file_put_contents("$motherdir/log.txt", "$id $msgAr[0]\n", FILE_APPEND);
+				return 0;
+			} else {
+				feedback("nothing to add");
+				return 1;
 			}
-			file_put_contents("$motherdir/log.txt", "$id $msgAr[0]\n", FILE_APPPEND);
 		}
 	}
 
-	function log(){
+	function getLog(){
 		$log = dirname(__FILE__) . "/log.txt";
 		if (!file_exists($log)){
 			echo "log empty\n";
 		} else {
 			$lines = file($log);
 			for ($i = count($lines)-1; $i >= 0 ; $i--) { 
-				echo $lines[$i] ."\n";
+				echo $lines[$i];
 			}
 		}
 		return 1;
@@ -115,6 +124,7 @@
 			feedback("could not access $args[0]");
 			return 1;
 		}
+	}
 		function rec_del(string $path){
 			if (is_dir($path)){
 				$dir = opendir($path);
