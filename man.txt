@@ -1,0 +1,81 @@
+						-------------------------
+						| Liste des commandes : |
+						-------------------------
+
+- add :
+
+	La commande “add” appelée sans argument, copie tout le répertoire courant ainsi que les sous dossiers et
+	les place dans un dossier que vous aurez créé dans votre dossier .MyGitLight.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php add file1 folder1/
+
+
+- commit :
+
+	La commande “commit” prend pour argument un message et crée une tarball avec le contenu de votre dossier.
+	Vous devez attribuer un id  à chaque commit de façon à pouvoir y retourner par la suite.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php commit “adding test”
+
+
+- rm :
+
+	La commande “rm” prend pour argument un ou plusieurs fichiers/dossiers. 
+	Elle supprime ces derniers du dossier de suivi et 
+	du répertoire de travail. 
+	Attention la suppression ne se fait que si les fichiers sont à la fois présents dans le dossier
+	de suivi et le répertoire de travail.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php rm test.txt
+
+
+- log :
+
+	La commande “log” affiche tous les commits sous forme “$id $message” triés par id et par ordre décroissant.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php log
+
+
+- status :
+
+	La commande “status“ affiche quels sont les fichiers qui ont été modifiés.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php status
+
+
+- checkout :
+
+	La commande “checkout“ est utilisée pour passer d’un commit à l’autre. Elle prend comme argument l’ID d’un commit.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php checkout
+
+
+- diff :
+
+	La commande “checkout“ permet d'afficher les modifications apportées par rapport à l'index.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php diff
+
+
+- help : 
+
+	La commande “help“ permet d'afficher la listes des commandes.
+
+	Exemple :
+
+		php ./.MyGitLight/MyGitLight.php help
+
