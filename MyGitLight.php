@@ -21,10 +21,17 @@
 			echo "Please specify valid path\n";
 			//TODO echo man
 			return 1;
-		} elseif ($fullPath = realpath($argv[0]) && is_dir($fullPath)){
-			mkdir($fullPath . "/.MyGitLight", 0777, true);
+		} elseif (($fullPath = realpath($argv[0])) && is_dir($fullPath)){
+			echo $fullPath . "\n";
+			echo $argv[0] . "\n";
+			if (!file_exists($fullPath . "/.MyGitLight")){
+				mkdir($fullPath . "/.MyGitLight", 0777, true);
+			}
 			copy(__FILE__, $fullPath . "/.MyGitLight/MyGitLight.php");
 			echo "Successfull init\n";
 			return 0;
 		}
+	} else {
+		echo $argv[0] . " Isn't a valid command\n";
+		//TODO add man
 	}
