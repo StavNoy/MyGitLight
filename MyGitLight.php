@@ -7,9 +7,15 @@
 		feedback("MyGitLight expects a command");
 		return 1;
 	} elseif (function_exists($argv[1])){
-		return $argv[1](array_slice($argv, 2));
+		$motherdir = dirname(__FILE__);
+		if ($motherdir != ".MyGitLight"){
+			echo "Error : not a MyGitLight repository\n";
+			return 1;
+		} else {
+			return $argv[1](array_slice($argv, 2));
+		}
 	} else {
-		echo $argv[1] . " Isn't a valid command\n";
+		echo "'$argv[1]' Isn't a valid command\n";
 		return 1;
 	}
 
@@ -23,7 +29,36 @@
 		if (empty($msgAr)){
 			feedback("A commit message is needed");
 			return 1;
+		} else {
+			$motherdir = dirname(__FILE__);
+			$tarballs = "$motherdir/tarballs";
+			$added = "$motherdir/added";
+			if(!file_exists($tarballs)) {
+				mkdir($tarballs);
+			}
+			if(is_dir($added)) {
+				static $id = 0;
+				$id++;
+				$folder = new Phar("$tarballs/$id.tar");
+				$folder->buildFromDirectory($added);
+				$compressed = $folder->compress(Phar::GZ);
+				unlink($folder);
+			}
+			file_put_contents("$motherdir/log.txt", "$id $msgAr[0]\n", FILE_APPPEND);
 		}
+	}
+
+	function log(){
+		$log = dirname(__FILE__) . "/log.txt";
+		if (!file_exists($log)){
+			echo "log empty\n";
+		} else {
+			$lines = file($log);
+			for ($i = count($lines)-1; $i >= 0 ; $i--) { 
+				echo $lines[$i] ."\n";
+			}
+		}
+		return 1;
 	}
 
 	function add(array $paths = []){
@@ -31,11 +66,12 @@
 			$paths = scandir(getcwd());
 			$paths = array_diff($paths, ['..', '.', '.MyGitLight']);
 		}
-		if(!file_exists(dirname(__FILE__) . "/added")){
-			mkdir(dirname(__FILE__) . "/added");
+		$motherdir = dirname(__FILE__);
+		if(!file_exists("$motherdir/added")){
+			mkdir("$motherdir/added");
 		}
 		foreach ($paths as $origin){
-			rec_copy($origin, dirname(__FILE__) . "/added/" . $origin);
+			rec_copy($origin, "$motherdir/added/$origin");
 		}
 		return 0;
 	}
@@ -79,4 +115,17 @@
 			feedback("could not access $args[0]");
 			return 1;
 		}
+		function rec_del(string $path){
+			if (is_dir($path)){
+				$dir = opendir($path);
+				while ($subfile = readdir($dir)){
+					if (basename($subfile) != "." && basename($subfile) != ".."){
+						rec_del($path . "/" . $subfile);
+					}
+				}
+				closedir($dir);
+				rmdir($path);
+			} else {
+				unlink($path);
+			}
 	}
