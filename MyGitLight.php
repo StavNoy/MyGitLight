@@ -22,7 +22,7 @@
 				feedback("this folder already has a MyGitLight");
 				return 1;
 			} else {
-				if (!is_writable($fullPath . "/.MyGitLight")){
+				if (!is_writable($fullPath)){
 					feedback("could not access folder : bad permissions");
 					return 1;
 				} else {
