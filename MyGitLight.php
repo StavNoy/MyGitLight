@@ -2,7 +2,8 @@
 
 	//TODO Write man
 	//TODO add try/catch everywhere
-	
+
+
 	if ($argc < 2){
 		feedback("MyGitLight expects a command");
 		return 1;
@@ -26,19 +27,45 @@
 		echo $str . "\n";
 		//TODO show man
 	}
+	function help(){
+        echo file_get_contents("man.txt");
+    }
 
+	function status(){
+	    $status = ["modified" => "", "untracked" => "", "deleted" => ""];
+        $motherdir = dirname(__FILE__);
+        $added = "$motherdir/added";
+        $workFiles = scandir("$motherdir/../");
+        $workFiles = array_diff($workFiles, [".",".."]);
+        foreach($workFiles as $file){
+            $added_version = "$added/$file";
+            if (!file_exists($added_version)){
+                $status["untracked"] .= "$file\n";
+            }
+            if (filemtime($file) != filemtime($added_version)){
+                $status["modified"] .= "$file\n";
+            }
+        }
+        $status["deleted"] = file_get_contents("motherdir/deleted.txt");
+        foreach ($status as $state => $fileNames){
+            echo "$state :\n$fileNames";
+        }
+        return 0;
+    }
 	function rm(array $args){
 		if (count($args) < 1){
 			feedback("Please specify files to remove");
 			return 1;
 		} else {
 			$motherdir = dirname(__FILE__);
+			$deleted = "$motherdir/deleted.txt";
 			foreach ($args as $path){
 				$added_version = "$motherdir/added/$path";
 				$work_version = "$motherdir/../$path";
 				if (file_exists($work_version) && file_exists($added_version)){
 					rec_del($added_version);
 					rec_del($work_version);
+					file_put_contents($deleted,"$path\n",FILE_APPEND);
 				}else {
 					feedback("Stopped : Files must exist in both the working and the tracking directories");
 					return 1;
@@ -70,7 +97,7 @@
 				$tarName = "$tarballs/$id.tar";
 				$folder = new PharData($tarName);
 				$folder->buildFromDirectory($added);
-				$compressed = $folder->compress(Phar::GZ);
+				$folder->compress(Phar::GZ);
 				unlink($tarName);
 				rec_del($added);
 				file_put_contents("$motherdir/log.txt", "$id $msgAr[0]\n", FILE_APPEND);
@@ -88,7 +115,7 @@
 			echo "log empty\n";
 		} else {
 			$lines = file($log);
-			for ($i = count($lines)-1; $i >= 0 ; $i--) { 
+			for ($i = count($lines)-1; $i >= 0 ; $i--) {
 				echo $lines[$i];
 			}
 		}
