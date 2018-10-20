@@ -28,7 +28,6 @@
 				} else {
 					mkdir($fullPath . "/.MyGitLight", 0777, true);
 					copy(__FILE__, $fullPath . "/.MyGitLight/MyGitLight.php");
-					echo "Successfull init\n";
 					return 0;
 				}
 			}
@@ -36,6 +35,24 @@
 			feedback("could not access $argv[2]");
 			return 1;
 		}
+	} elseif ($argv[1] == "add") {
+		$paths = ($argv > 3) ? array_slice($argv, 2) : scandir(getcwd());
+		foreach ($paths as $origin){
+			if (file_exists($origin)){
+				copy($origin, dirname(dirname(__FILE__)));
+			} else {
+				
+			}
+		}
+	} elseif ($argv[1] == "commit") {
+		if (argc < 3){
+			feedback("A commit message is needed");
+			return 1;
+		}
+	} elseif ($argv[1] == "remove") {
+		//TODO
+	} elseif ($argv[1] == "log") {
+		//TODO
 	} else {
 		echo $argv[1] . " Isn't a valid command\n";
 		return 1;
