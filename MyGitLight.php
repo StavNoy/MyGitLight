@@ -40,9 +40,12 @@
 				mkdir($tarballs);
 			}
 			if(is_dir($added)) {
-				$logs = file($log);
-				$lastLog = $logs[count($logs)-1];
-				$id = explode(" ", $lastLog)[0]+1;
+				$id = 1;
+				if (file_exists($log)){
+					$logs = file($log);
+					$lastLog = $logs[count($logs)-1];
+					$id = explode(" ", $lastLog)[0]+1;
+				}
 				$tarName = "$tarballs/$id.tar";
 				$folder = new PharData($tarName);
 				$folder->buildFromDirectory($added);
