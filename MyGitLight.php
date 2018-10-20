@@ -8,7 +8,7 @@
 */
 
 	//TODO Write man
-	//TODO add try/catch evrywhere
+	//TODO add try/catch everywhere
 
 	array_shift($argv);
 	if ($argc < 1){
