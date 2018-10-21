@@ -1,9 +1,5 @@
 <?php
 
-	//TODO add try/catch everywhere
-	//TODO change from anonymous functions to switch
-	//TODO make global variable paths
-
 	define("GIT_FOLDER",	dirname(__FILE__));
 	define("GITROOT",		dirname(GIT_FOLDER));
 	define("TARBALLS", 		GIT_FOLDER."/tarballs");
@@ -15,18 +11,36 @@
 	if ($argc < 2){
 		feedback("MyGitLight expects a command");
 		return 1;
-	} elseif (function_exists($argv[1])){
-		if (basename(GIT_FOLDER) != ".MyGitLight"){
-			echo "Error : not a MyGitLight repository\n";
-			return 1;
-		} elseif ($argv[1] == "log"){
-			return getLog();
-		} else {
-			return $argv[1](array_slice($argv, 2));
-		}
-	} else {
-		feedback("'$argv[1]' Isn't a valid command");
+	} elseif($argv[1] == "init") {
+		return init();
+	} elseif (basename(GIT_FOLDER) != ".MyGitLight"){
+		feedback("Error : not a MyGitLight repository");
 		return 1;
+	}else{
+		$args = $argv[1](array_slice($argv, 2));
+		switch($argv[1]){
+			case "help" :
+				help();
+				break;
+			case "add" :
+				return add($args);
+			case "commit" :
+				return commit($args);
+			case "rm" :
+				return rm($args);
+			case "log" :
+				return getlog();
+			case "status" :
+				return status();
+			case "checkout" :
+				return checkout($args);
+			case "diff" :
+				// TODO write function
+				return diff();
+			default :
+				feedback("'$argv[1]' Isn't a valid command");
+				return 1;
+		}
 	}
 
 
@@ -116,10 +130,10 @@
 				if (file_exists($work_version) && file_exists($added_version)){
 					rec_del($added_version);
 					rec_del($work_version);
-					$toWrite = $path . path_from_gitRoot($path) . "\n";
+					$toWrite = $path . " " . path_from_gitRoot($path) . "\n";
 					file_put_contents(DELETED, $toWrite,FILE_APPEND);
 				}else {
-					feedback("Stopped : Files must exist in both the working and the tracking directories");
+					feedback("Stopped : File '$path' must exist in both the working and the tracking directories");
 					return 1;
 				}
 			}
@@ -128,43 +142,34 @@
 	}
 
 	function commit(array $msgAr = []){
-		if (empty($msgAr)){
+		if (empty($msgAr)) {
 			feedback("A commit message is needed");
 			return 1;
+		} elseif (filemtime(ADDED) <= filemtime(TARBALLS)) {
+			feedback("nothing to add");
+			return 1;
 		} else {
-			if(!file_exists(TARBALLS)) {
-				mkdir(TARBALLS);
+			$id = 1;
+			if ($logs = file(LOG)) {
+				$lastLog = $logs[count($logs) - 1];
+				$id = explode(" ", $lastLog)[0] + 1;
 			}
-			if(!file_exists(ADDED)) {
-				mkdir(ADDED);
-			}
-			if(filemtime(ADDED) > filemtime(TARBALLS)) {
-				$id = 1;
-				if (file_exists(LOG)){
-					$logs = file(LOG);
-					$lastLog = $logs[count($logs)-1];
-					$id = explode(" ", $lastLog)[0]+1;
-				}
-				$tarName = TARBALLS."/$id.tar";
-				$folder = new PharData($tarName);
-				$folder->buildFromDirectory(ADDED);
-				$folder->compress(Phar::GZ);
-				unlink($tarName);
-				file_put_contents(LOG, "$id $msgAr[0]\n", FILE_APPEND);
-				return 0;
-			} else {
-				feedback("nothing to add");
-				return 1;
-			}
+			$tarName = TARBALLS . "/$id.tar";
+			$folder = new PharData($tarName);
+			$folder->buildFromDirectory(ADDED);
+			$folder->compress(Phar::GZ);
+			unlink($tarName);
+			file_put_contents(LOG, "$id $msgAr[0]\n", FILE_APPEND);
+			return 0;
 		}
 	}
 
 	function getLog(){
-		if (!file_exists(LOG)){
-			echo "LOG empty\n";
+		$lines = file(LOG);
+		if (empty($lines)) {
+			echo "log empty\n";
 		} else {
-			$lines = file(LOG);
-			for ($i = count($lines)-1; $i >= 0 ; $i--) {
+			for ($i = count($lines) - 1; $i >= 0; $i--) {
 				echo $lines[$i];
 			}
 		}
@@ -225,11 +230,16 @@
 					feedback("could not access folder : bad permissions");
 					return 1;
 				} else {
-					mkdir($path . "/.MyGitLight", 0777, true);
-					copy(__FILE__, $path . "/.MyGitLight/MyGitLight.php");
-					copy(dirname(__FILE__) . "/man.txt", $path . "/.MyGitLight/man.txt");
+					$newGitFolder = "$path/.MyGitLight";
+					mkdir($newGitFolder, 0777, true);
+					copy(__FILE__, "$newGitFolder/MyGitLight.php");
+					copy(dirname(__FILE__) . "/man.txt", "$newGitFolder/man.txt");
+					mkdir("$newGitFolder/added");
+					mkdir("$newGitFolder/tarballs");
+					touch("$newGitFolder/log.txt");
+					touch("$newGitFolder/deleted.txt");
 					//TODO copy diff class
-					//TODO make added, tarballs, log, deleted, lastcheckout, etc
+					touch("$newGitFolder/last_checkout.txt");
 					return 0;
 				}
 			}
