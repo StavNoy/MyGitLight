@@ -1,8 +1,6 @@
 <?php
 
-	//TODO Write man
 	//TODO add try/catch everywhere
-
 
 	if ($argc < 2){
 		feedback("MyGitLight expects a command");
@@ -18,37 +16,43 @@
 			return $argv[1](array_slice($argv, 2));
 		}
 	} else {
-		echo "'$argv[1]' Isn't a valid command\n";
+		feedback("'$argv[1]' Isn't a valid command");
 		return 1;
 	}
 
 
 	function feedback(string $str){
 		echo $str . "\n";
-		//TODO show man
+		help();
 	}
 	function help(){
-        echo file_get_contents("man.txt");
+        echo file_get_contents(dirname(__FILE__)."/man.txt");
     }
-
+    function path_from_gitRoot(string $fileName){
+	    $toRemove = realpath(dirname(dirname(__FILE__)));
+	    $fullPath = realpath($fileName);
+	    return substr($fullPath,strlen($toRemove)-1);
+    }
 	function status(){
-	    $status = ["modified" => "", "untracked" => "", "deleted" => ""];
+	    $status = ["modified" => [], "untracked" => [], "deleted" => []];
         $motherdir = dirname(__FILE__);
         $added = "$motherdir/added";
         $workFiles = scandir("$motherdir/../");
-        $workFiles = array_diff($workFiles, [".",".."]);
+        $workFiles = array_diff($workFiles, [".", "..", ".MyGitLight"]);
         foreach($workFiles as $file){
             $added_version = "$added/$file";
             if (!file_exists($added_version)){
-                $status["untracked"] .= "$file\n";
+                $status["untracked"][] = "$file at " . path_from_gitRoot($file);
             }
             if (filemtime($file) != filemtime($added_version)){
-                $status["modified"] .= "$file\n";
+                $status["modified"][] = "$file\n";
             }
         }
-        $status["deleted"] = file_get_contents("motherdir/deleted.txt");
+        $status["deleted"] = file("$motherdir/deleted.txt");
         foreach ($status as $state => $fileNames){
-            echo "$state :\n$fileNames";
+            sort($fileNames);
+            $asString = implode("",$fileNames);
+            echo "$state :\n$asString";
         }
         return 0;
     }
@@ -87,7 +91,10 @@
 			if(!file_exists($tarballs)) {
 				mkdir($tarballs);
 			}
-			if(is_dir($added)) {
+			if(!file_exists($added)) {
+				mkdir($added);
+			}
+			if(filemtime($added) < filemtime($tarballs)) {
 				$id = 1;
 				if (file_exists($log)){
 					$logs = file($log);
@@ -125,32 +132,39 @@
 	function add(array $paths = []){
 		if (empty($paths)) {
 			$paths = scandir(getcwd());
-			$paths = array_diff($paths, ['..', '.', '.MyGitLight']);
+			$paths = array_diff($paths, ['..', '.', '.MyGitLight', 'added']);
 		}
 		$motherdir = dirname(__FILE__);
 		if(!file_exists("$motherdir/added")){
 			mkdir("$motherdir/added");
 		}
 		foreach ($paths as $origin){
-			rec_copy($origin, "$motherdir/added/$origin");
-		}
+            if (file_exists($origin)) {
+                rec_copy($origin, "$motherdir/added/$origin");
+            }
+            else {
+                echo "Skipped : $origin is not a valid path\n";
+            }
+        }
 		return 0;
 	}
 	function rec_copy(string $origin, string $target){
-		if (!is_dir($origin)){
-			if (!copy($origin, $target)){
-				echo "Failed to add $origin\n";
-			}
-		} else {
-			if(!file_exists($target)){
-				mkdir($target, 0777, true);
-			}
-			$subFiles = scandir($origin);
-			$subFiles = array_diff($subFiles, ['..', '.']);
-			foreach($subFiles as $aSub){
-				rec_copy($origin . "/" . $aSub, $target . "/" . $aSub);
-			}
-		}
+	    if (!file_exists($target) || filemtime($origin) < filemtime($target)){
+            if (!is_dir($origin)){
+                if (!copy($origin, $target)){
+                    echo "Failed to add $origin\n";
+                }
+            } else {
+                if(!file_exists($target)){
+                    mkdir($target, 0777, true);
+                }
+                $subFiles = scandir($origin);
+                $subFiles = array_diff($subFiles, ['..', '.']);
+                foreach($subFiles as $aSub){
+                    rec_copy($origin . "/" . $aSub, $target . "/" . $aSub);
+                }
+            }
+        }
 	}
 
 	function init(array $args = []){
@@ -169,6 +183,7 @@
 				} else {
 					mkdir($path . "/.MyGitLight", 0777, true);
 					copy(__FILE__, $path . "/.MyGitLight/MyGitLight.php");
+					copy(dirname(__FILE__)."/man.txt", $path . "/.MyGitLight/man.txt");
 					return 0;
 				}
 			}
