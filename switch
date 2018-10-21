@@ -1,0 +1,41 @@
+<?php
+if($argv[1] == init){
+	if (basename($motherdir) != ".MyGitLight"){
+			echo "Error : not a MyGitLight repository\n";
+			return 1;
+	}else{
+		return init();
+	}
+}else{
+	switch($argv[1]){
+
+		case "help" :
+			return help();
+			
+		case "add" :
+			return add();
+
+		case "commit" :
+			return commit();
+
+		case "rm" :
+			return rm();
+
+		case "log" :
+			return getlog();
+
+		case "status" :
+			return status();
+
+		case "checkout" :
+			return checkout();
+
+		case "diff" :
+			return diff();
+
+		default :
+			feedback("'$argv[1]' Isn't a valid command");
+			return 1;
+
+	}
+}
