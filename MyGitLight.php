@@ -11,6 +11,10 @@
 	define("LOG",			GIT_FOLDER."/log.txt");
 	define("CHECKOUT_TIME", GIT_FOLDER."/last_checkout.txt");
 
+	/*
+	** Prendre le nom de function par le input standard
+	** seulment 'init' et 'help' sont permises en dehors d'une repository
+	*/
 	if ($argc < 2){
 		feedback("MyGitLight expects a command");
 		return 1;
@@ -48,9 +52,14 @@
 		help();
 	}
 	function help(){
-		echo file_get_contents(dirname(__FILE__)."/man.txt");
+		echo file_get_contents(GIT_FOLDER."/man.txt");
 	}
 
+	/*
+	** analyse les fichiers de la repository et compare avec la version 'tracked' (dans le 'added')
+	** utilise la bibliothèque external 'Diff'
+	** pour les dossier, la fonction 'rec_diff' est utilize, qui prendre le tableau 'output' par reference
+	*/
 	function diff()	{
 		$output = [];
 		$workFiles = scandir(GITROOT);
@@ -64,10 +73,16 @@
 				echo "$file\n" . Diff::toString($diff) . "\n";
 			}
 		}
-		return 1;
+		return 0;
 	}
 
-	function rec_diff(string $path, &$output){
+	/*
+	** prendre tableau par reference
+	** utilise la bibliothèque external 'Diff'
+	** cherche pour des fichiers modifies
+	** chacun de ces fichiers est ajoute dans le tableau comme [nom-de-fichier] =>  [objet-Diff-correspondant]
+	*/
+	function rec_diff(string $path, array &$output){
 		if (!is_dir($path)){
 			$diff = Diff::compareFiles(ADDED."/$path", GITROOT."/$path");
 			foreach ($diff as $line){
@@ -85,6 +100,11 @@
 		}
 	}
 
+	/* supprime tout les fichier dans le repository, est remplace avec ceux dans le 'commit' demande par ID (de l'archive correspondant)
+	** l'ID doit etre valide
+	** toutes les modifications doivent etre commis avant le 'checkout'
+	** afin de différencier une modification d'une checkot, le fichier 'CHECKOUT_TIME' est référencé
+	*/
 	function checkout(array $args){
 		if ($args < 1){
 			feedback("checkout needs an ID");
@@ -127,6 +147,12 @@
 			}
 		}
 	}
+	/*
+	** compare chaque fichier dans le repository avec une version 'added', et se place dans une tableau 2 dimension
+	** 	la version 'added' n'existe deja -> 'untracked'
+	** 	l'origine a se modifie plus tard que la version added -> 'modified'
+	** le fichier supprime sont trouves dans le fichier 'deleted'
+	*/
 	function status(){
 		$status = ["modified" => [], "untracked" => [], "deleted" => []];
 		$workFiles = scandir(GITROOT);
@@ -147,6 +173,11 @@
 		}
 		return 0;
 	}
+	/*
+	** supprime les fichier specifies
+	** seaulment si ils existent dans la repository est aussi dans la dossier 'added'
+	** note dans le fichier 'deleted'
+	*/
 	function rm(array $args){
 		if (count($args) < 1){
 			feedback("Please specify files to remove");
@@ -155,37 +186,44 @@
 			foreach ($args as $path){
 				$added_version = ADDED."/$path";
 				$work_version = GITROOT."/$path";
-				if (file_exists($work_version) && file_exists($added_version)){
-					rec_del($added_version);
-					rec_del($work_version);
-					$toWrite = "$path " . GITROOT."/$path\n";
-					file_put_contents(DELETED, $toWrite,FILE_APPEND);
-				}else {
+				if (!file_exists($work_version) || !file_exists($added_version)) {
 					feedback("Stopped : File '$path' must exist in both the working and the tracking directories");
 					return 1;
+				} else {
+					rec_del($added_version);
+					rec_del($work_version);
+					$toWrite = "$path " . GITROOT . "/$path\n";
+					file_put_contents(DELETED, $toWrite, FILE_APPEND);
 				}
 			}
 			return 0;
 		}
 	}
 
+	/*
+	** cree une archive compresse du fichier 'added', qui s'appel par son ID
+	** note la message passe dans la fichier 'log', avec l'ID
+	** doit avoir une message
+	** le 'added' doit a ete modifie depuis la dernier 'commit'
+	*/
 	function commit(array $msgAr = []){
 		if (empty($msgAr)) {
 			feedback("A commit message is needed");
 			return 1;
-		} elseif (filemtime(ADDED) <= filemtime(TARBALLS)) {
+		} elseif (filemtime(ADDED) < filemtime(TARBALLS)) {
 			feedback("nothing to add");
 			return 1;
 		} else {
 			$id = 1;
 			if ($logs = file(LOG)) {
 				$lastLog = $logs[count($logs) - 1];
-				$id = explode(" ", $lastLog)[0] + 1;
+				$id = explode(" ", $lastLog)[0];
+				$id++;
 			}
 			$tarName = TARBALLS . "/$id.tar";
-			$folder = new PharData($tarName);
-			$folder->buildFromDirectory(ADDED);
-			$folder->compress(Phar::GZ);
+			$tar = new PharData($tarName);
+			$tar->buildFromDirectory(ADDED);
+			$tar->compress(Phar::GZ);
 			unlink($tarName);
 			file_put_contents(LOG, "$id $msgAr[0]\n", FILE_APPEND);
 			return 0;
@@ -204,6 +242,10 @@
 		return 1;
 	}
 
+	/*
+	** copie les chemins passe a la repository
+	** si aucun chemin n'est specifie, ajoute touts dans la dossier actuelle
+	*/
 	function add(array $paths = []){
 		if (empty($paths)) {
 			$paths = scandir(getcwd());
@@ -218,8 +260,11 @@
 		}
 		return 0;
 	}
+	/*
+	** copie recorsive, en raison de dossier
+	*/
 	function rec_copy(string $source, string $dest){
-		if (!file_exists($dest) || filemtime($source) < filemtime($dest)){
+		if (!file_exists($dest) || filemtime($source) > filemtime($dest)){
 			if (!is_dir($source)){
 				if (!copy($source, $dest)){
 					echo "Failed to add $source\n";
@@ -236,7 +281,10 @@
 			}
 		}
 	}
-
+	/*
+	** dans le chemin spécifié, crée un dossier git, copie et instancie tous les fichiers et dossiers nécessaires
+	** le chemin doit etre d'un dossier qui existe, ou la script a des droites nécessaires
+	*/
 	function init(array $args = []){
 		if (empty($args)) {
 			feedback("Please specify valid path");
@@ -255,10 +303,10 @@
 					return 1;
 				} else {
 					$newGitFolder = "$path/.MyGitLight";
-					mkdir($newGitFolder, 0777, true);
+					mkdir($newGitFolder);
 					copy(__FILE__, "$newGitFolder/MyGitLight.php");
-					copy(dirname(__FILE__) . "/man.txt", "$newGitFolder/man.txt");
-					copy(dirname(__FILE__) . "/class.Diff.php", "$newGitFolder/class.Diff.php");
+					copy(GIT_FOLDER . "/man.txt", "$newGitFolder/man.txt");
+					copy(GIT_FOLDER . "/class.Diff.php", "$newGitFolder/class.Diff.php");
 					mkdir("$newGitFolder/added");
 					mkdir("$newGitFolder/tarballs");
 					touch("$newGitFolder/log.txt");
@@ -270,19 +318,21 @@
 		}
 	}
 	function rec_del(string $path){
-		if (is_dir($path)){
+		if (!is_dir($path)) {
+			unlink($path);
+		} else {
 			$dir = opendir($path);
-			while ($subfile = readdir($dir)){
-				if (basename($subfile) != "." && basename($subfile) != ".."){
+			while ($subfile = readdir($dir)) {
+				if (basename($subfile) != "." && basename($subfile) != "..") {
 					rec_del($path . "/" . $subfile);
 				}
 			}
 			closedir($dir);
 			rmdir($path);
-		} else {
-			unlink($path);
 		}
 	}
+
+	/*
 	function path_from_gitRoot(string $fileName){
 		$fullPath = realpath($fileName);
 		$toRemove = realpath(GITROOT);
@@ -290,3 +340,4 @@
 		var_dump($fullPath);
 		return substr($fullPath,strlen($toRemove)+1);
 	}
+	*/
