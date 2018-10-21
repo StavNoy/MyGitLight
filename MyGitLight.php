@@ -1,5 +1,8 @@
 <?php
 
+	require_once 'class.Diff.php';
+
+
 	define("GIT_FOLDER",	dirname(__FILE__));
 	define("GITROOT",		dirname(GIT_FOLDER));
 	define("TARBALLS", 		GIT_FOLDER."/tarballs");
@@ -32,7 +35,6 @@
 			case "checkout" :
 				return checkout($args);
 			case "diff" :
-				// TODO write function
 				return diff();
 			default :
 				feedback("'$argv[1]' Isn't a valid command");
@@ -49,19 +51,38 @@
 		echo file_get_contents(dirname(__FILE__)."/man.txt");
 	}
 
-	function diff()
-	{
-		$motherdir = dirname(__FILE__);
-		if ($motherdir == Diff::UNMODIFIED) {
-			echo "nothing to modify\n";
-			return 0;
+	function diff()	{
+		$output = [];
+		$workFiles = scandir(GITROOT);
+		$workFiles = array_diff($workFiles,[".","..",".MyGitLight"]);
+		foreach ($workFiles as $file){
+			rec_diff($file, $output);
 		}
-
-		elseif ($motherdir == Diff::INSERTED || $motherdir == Diff::DELETED) {
-			echo Diff::toString(Diff::compareFiles($motherdir));
+		if (!empty($output)){
+			asort($output);
+			foreach ($output as $file => $diff) {
+				echo "$file\n" . Diff::toString($diff) . "\n";
+			}
 		}
+		return 1;
+	}
 
-
+	function rec_diff(string $path, &$output){
+		if (!is_dir($path)){
+			$diff = Diff::compareFiles(ADDED."/$path", GITROOT."/$path");
+			foreach ($diff as $line){
+				if ($line[1] !== Diff::UNMODIFIED){
+					$output[$path] = $diff;
+					break;
+				}
+			}
+		} else {
+			$subFiles = scandir($path);
+			$subFiles = array_diff($subFiles,[".",".."]);
+			foreach ($subFiles as $subFile){
+				rec_diff("$path/$subFile", $output);
+			}
+		}
 	}
 
 	function checkout(array $args){
