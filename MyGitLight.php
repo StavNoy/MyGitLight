@@ -29,9 +29,9 @@
         echo file_get_contents(dirname(__FILE__)."/man.txt");
     }
     function path_from_gitRoot(string $fileName){
-	    $toRemove = realpath(dirname(dirname(__FILE__)));
-	    $fullPath = realpath($fileName);
-	    return substr($fullPath,strlen($toRemove)-1);
+        $toRemove = realpath(dirname(dirname(__FILE__)));
+        $fullPath = realpath($fileName);
+        return substr($fullPath,strlen($toRemove)+1);
     }
 	function status(){
 	    $status = ["modified" => [], "untracked" => [], "deleted" => []];
@@ -42,10 +42,10 @@
         foreach($workFiles as $file){
             $added_version = "$added/$file";
             if (!file_exists($added_version)){
-                $status["untracked"][] = "$file at " . path_from_gitRoot($file);
+                $status["untracked"][] = "$file at " . path_from_gitRoot($file) . "\n";
             }
             if (filemtime($file) != filemtime($added_version)){
-                $status["modified"][] = "$file\n";
+                $status["modified"][] = "$file at " . path_from_gitRoot($file) . "\n";
             }
         }
         $status["deleted"] = file("$motherdir/deleted.txt");
@@ -69,7 +69,8 @@
 				if (file_exists($work_version) && file_exists($added_version)){
 					rec_del($added_version);
 					rec_del($work_version);
-					file_put_contents($deleted,"$path\n",FILE_APPEND);
+					$toWrite = $path . path_from_gitRoot($path) . "\n";
+					file_put_contents($deleted, $toWrite,FILE_APPEND);
 				}else {
 					feedback("Stopped : Files must exist in both the working and the tracking directories");
 					return 1;
